@@ -1,0 +1,21 @@
+{
+  "name": "Vue3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node scripts/dev.js reactivity --format esm"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.9.0",
+  "devDependencies": {
+    "@types/node": "^22.15.2",
+    "esbuild": "^0.25.3",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  }
+}
