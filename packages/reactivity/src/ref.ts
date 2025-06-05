@@ -1,8 +1,10 @@
 import { activeSub } from './effect'
+import { Link, link, propagate } from './system'
 
 enum ReactiveFlags {
   IS_REF = '__v_isRef',
 }
+
 /**
  * Ref 得类
  */
@@ -12,8 +14,16 @@ class RefImpl {
   //ref标记 证明是一个ref
   [ReactiveFlags.IS_REF] = true
 
-  //保存和effect 之间的关联关系
-  subs
+  /**
+   * 订阅者链表的头节点,head
+   */
+  subs: Link
+
+  /**
+   *
+   * 订阅者链表的尾节点 理解为tail
+   */
+  subsTail: Link
 
   constructor(value) {
     this._value = value
@@ -23,20 +33,15 @@ class RefImpl {
     //收集依赖
     // console.log('收集依赖', activeSub)
     if (activeSub) {
-      // 如果有 收集依赖
-      this.subs = activeSub
-      // this.subs = this.subs || new Set()
-      // this.subs.add(activeSub)
+      trackRef(this)
     }
     return this._value
   }
 
   set value(newValue) {
-    //触发依赖
-    // console.log('触发依赖')
     this._value = newValue
     //通知effect函数执行
-    this.subs?.()
+    triggerRef(this)
   }
 }
 
@@ -48,4 +53,25 @@ export function ref(value) {
  */
 export function isRef(value) {
   return !!(value && value[ReactiveFlags.IS_REF])
+}
+
+/**
+ * 收集依赖，建立ref和effect之间的链表关系
+ * @param dep
+ */
+export function trackRef(dep) {
+  if (activeSub) {
+    link(dep, activeSub)
+  }
+}
+
+/**
+ * 关联的effect重新执行
+ * @param dep
+ *
+ */
+export function triggerRef(dep) {
+  if (dep.subs) {
+    propagate(dep.subs)
+  }
 }
