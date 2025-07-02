@@ -5,17 +5,28 @@ var ReactiveEffect = class {
     this.fn = fn;
   }
   run() {
+    const prevSub = activeSub;
     activeSub = this;
     try {
       return this.fn();
     } finally {
-      activeSub = void 0;
+      activeSub = prevSub;
     }
   }
+  notify() {
+    this.scheduler();
+  }
+  scheduler() {
+    this.run;
+  }
 };
-function effect(fn) {
+function effect(fn, options) {
   const e = new ReactiveEffect(fn);
+  Object.assign(e, options);
   e.run();
+  const runner = e.run.bind(e);
+  runner.effect = e;
+  return runner;
 }
 
 // packages/reactivity/src/system.ts
@@ -41,7 +52,7 @@ function propagate(subs) {
     queuedEffect.push(link2.sub);
     link2 = link2.nextSub;
   }
-  queuedEffect.forEach((effect2) => effect2.run());
+  queuedEffect.forEach((effect2) => effect2.notify());
 }
 
 // packages/reactivity/src/ref.ts
@@ -90,6 +101,7 @@ function triggerRef(dep) {
   }
 }
 export {
+  ReactiveEffect,
   activeSub,
   effect,
   isRef,

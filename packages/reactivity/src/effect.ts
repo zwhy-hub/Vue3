@@ -17,9 +17,28 @@ export class ReactiveEffect {
       activeSub = prevSub
     }
   }
+
+  notify() {
+    this.scheduler()
+  }
+
+  scheduler() {
+    this.run
+  }
 }
 
-export function effect(fn) {
+export function effect(fn, options) {
   const e = new ReactiveEffect(fn)
+  // scheduler
+  Object.assign(e, options)
   e.run()
+  /**
+   * 绑定this
+   */
+  const runner = e.run.bind(e)
+  /**
+   * 把 effect实例放到effect属性中
+   */
+  runner.effect = e
+  return runner
 }
