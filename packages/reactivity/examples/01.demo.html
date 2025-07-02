@@ -17,13 +17,11 @@
       const count = ref(0)
 
       effect(() => {
+        effect(() => {
+          console.log('effect2', count.value)
+        })
         console.log('effect1', count.value)
       })
-
-      effect(() => {
-        console.log('effect2', count.value)
-      })
-
 
       setTimeout(() => {
         count.value++

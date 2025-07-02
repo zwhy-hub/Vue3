@@ -1,4 +1,4 @@
-import { ReactiveEffect } from 'vue'
+import { ReactiveEffect } from './effect'
 
 export interface Link {
   //保存effect
