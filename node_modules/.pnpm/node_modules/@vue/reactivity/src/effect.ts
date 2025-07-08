@@ -1,15 +1,25 @@
+import type { Link } from './system'
+
 //用来保存当前正在执行的effect函数
 export let activeSub
 
 export class ReactiveEffect {
+  /**
+   * 依赖项链表的头节点
+   */
+  deps: Link | undefined
+  /**
+   * 依赖项链表的尾节点
+   */
+  depsTail: Link | undefined
+
   constructor(public fn) {}
 
   run() {
     const prevSub = activeSub
-
     //每次执行fn之前，吧this放在activeSub上
     activeSub = this
-
+    this.depsTail = undefined
     try {
       return this.fn()
     } finally {
@@ -23,7 +33,7 @@ export class ReactiveEffect {
   }
 
   scheduler() {
-    this.run
+    this.run()
   }
 }
 

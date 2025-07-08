@@ -13,12 +13,10 @@ class RefImpl {
   _value;
   //ref标记 证明是一个ref
   [ReactiveFlags.IS_REF] = true
-
   /**
    * 订阅者链表的头节点,head
    */
   subs: Link
-
   /**
    *
    * 订阅者链表的尾节点 理解为tail
