@@ -36,6 +36,7 @@ export interface Link {
  * @param dep
  * @param sub
  */
+
 export function link(dep, sub) {
   //复用链表依赖
   const currentDep = sub.depsTail
