@@ -55,7 +55,7 @@ export function link(dep, sub) {
     dep,
     nextSub: undefined,
     prevSub: undefined,
-    nextDep: undefined,
+    nextDep,
   }
 
   //将链表节点与dep建立关系

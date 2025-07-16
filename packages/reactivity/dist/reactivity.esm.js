@@ -11,7 +11,7 @@ function link(dep, sub) {
     dep,
     nextSub: void 0,
     prevSub: void 0,
-    nextDep: void 0
+    nextDep
   };
   if (dep.subsTail) {
     dep.subsTail.nextSub = newLink;
