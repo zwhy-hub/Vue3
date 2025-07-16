@@ -1,43 +1,3 @@
-// packages/reactivity/src/effect.ts
-var activeSub;
-var ReactiveEffect = class {
-  constructor(fn) {
-    this.fn = fn;
-  }
-  /**
-   * 依赖项链表的头节点
-   */
-  deps;
-  /**
-   * 依赖项链表的尾节点
-   */
-  depsTail;
-  run() {
-    const prevSub = activeSub;
-    activeSub = this;
-    this.depsTail = void 0;
-    try {
-      return this.fn();
-    } finally {
-      activeSub = prevSub;
-    }
-  }
-  notify() {
-    this.scheduler();
-  }
-  scheduler() {
-    this.run();
-  }
-};
-function effect(fn, options) {
-  const e = new ReactiveEffect(fn);
-  Object.assign(e, options);
-  e.run();
-  const runner = e.run.bind(e);
-  runner.effect = e;
-  return runner;
-}
-
 // packages/reactivity/src/system.ts
 function link(dep, sub) {
   const currentDep = sub.depsTail;
@@ -77,6 +37,82 @@ function propagate(subs) {
     link2 = link2.nextSub;
   }
   queuedEffect.forEach((effect2) => effect2.notify());
+}
+function startTrack(sub) {
+  sub.depsTail = void 0;
+}
+function endTrack(sub) {
+  const depsTail = sub.depsTail;
+  if (depsTail) {
+    if (depsTail.nextDep) {
+      clearTracking(depsTail.nextDep);
+      depsTail.nextDep = void 0;
+    }
+  } else if (sub.deps) {
+    clearTracking(sub.deps);
+    sub.deps = void 0;
+  }
+}
+function clearTracking(link2) {
+  while (link2) {
+    const { prevSub, nextSub, nextDep, dep } = link2;
+    if (prevSub) {
+      prevSub.nextSub = nextSub;
+      link2.nextSub = void 0;
+    } else {
+      dep.subs = nextSub;
+    }
+    if (nextSub) {
+      nextSub.prevSub = prevSub;
+      link2.prevSub = void 0;
+    } else {
+      dep.subsTail = prevSub;
+    }
+    link2.dep = link2.sub = void 0;
+    link2.nextDep = void 0;
+    link2 = nextDep;
+  }
+}
+
+// packages/reactivity/src/effect.ts
+var activeSub;
+var ReactiveEffect = class {
+  constructor(fn) {
+    this.fn = fn;
+  }
+  /**
+   * 依赖项链表的头节点
+   */
+  deps;
+  /**
+   * 依赖项链表的尾节点
+   */
+  depsTail;
+  run() {
+    const prevSub = activeSub;
+    activeSub = this;
+    startTrack(this);
+    try {
+      return this.fn();
+    } finally {
+      endTrack(this);
+      activeSub = prevSub;
+    }
+  }
+  notify() {
+    this.scheduler();
+  }
+  scheduler() {
+    this.run();
+  }
+};
+function effect(fn, options) {
+  const e = new ReactiveEffect(fn);
+  Object.assign(e, options);
+  e.run();
+  const runner = e.run.bind(e);
+  runner.effect = e;
+  return runner;
 }
 
 // packages/reactivity/src/ref.ts

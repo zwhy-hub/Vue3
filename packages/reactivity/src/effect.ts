@@ -1,4 +1,5 @@
 import type { Link } from './system'
+import { startTrack, endTrack } from './system'
 
 //用来保存当前正在执行的effect函数
 export let activeSub
@@ -20,10 +21,11 @@ export class ReactiveEffect {
     //每次执行fn之前，吧this放在activeSub上
     activeSub = this
     //标记为undefined 表示被dep触发了重新执行 要尝试复用link节点
-    this.depsTail = undefined
+    startTrack(this)
     try {
       return this.fn()
     } finally {
+      endTrack(this)
       //执行完之后 把active设置成undefined
       activeSub = prevSub
     }

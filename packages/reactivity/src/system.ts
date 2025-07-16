@@ -101,3 +101,68 @@ export function propagate(subs) {
   }
   queuedEffect.forEach(effect => effect.notify())
 }
+
+/**
+ *
+ * @param sub 开始追踪依赖，将depsTail设置为undefined
+ */
+export function startTrack(sub) {
+  sub.depsTail = undefined
+}
+
+/**
+ *
+ * @param sub 结束追踪，找到需要清理的依赖，断开关联关系
+ */
+export function endTrack(sub) {
+  const depsTail = sub.depsTail
+  /**
+   * 如果depsTail有，并且depsTail还有nextDep,清除依赖关系
+   * 如果depsTail没有，头节点有，全部清除
+   */
+  if (depsTail) {
+    if (depsTail.nextDep) {
+      clearTracking(depsTail.nextDep)
+      depsTail.nextDep = undefined
+    }
+  } else if (sub.deps) {
+    clearTracking(sub.deps)
+    sub.deps = undefined
+  }
+}
+
+/**
+ *
+ * @param link 清除依赖
+ */
+export function clearTracking(link: Link) {
+  while (link) {
+    const { prevSub, nextSub, nextDep, dep } = link
+
+    /**
+     * 如果prevSub 有 prevSub.nextSub指向nextSub
+     * 如果没有，是头节点，把dep.subs指向nextSub
+     */
+    if (prevSub) {
+      prevSub.nextSub = nextSub
+      link.nextSub = undefined
+    } else {
+      dep.subs = nextSub
+    }
+
+    /**
+     * 如果nextSub有，把nextSub.prevSub指向上一个
+     *如果下一个没有，是尾节点，把subsTail指向上一个
+     */
+    if (nextSub) {
+      nextSub.prevSub = prevSub
+      link.prevSub = undefined
+    } else {
+      dep.subsTail = prevSub
+    }
+
+    link.dep = link.sub = undefined
+    link.nextDep = undefined
+    link = nextDep
+  }
+}
