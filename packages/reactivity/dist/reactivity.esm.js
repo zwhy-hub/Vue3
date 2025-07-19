@@ -1,4 +1,5 @@
 // packages/reactivity/src/system.ts
+var linkPool;
 function link(dep, sub) {
   const currentDep = sub.depsTail;
   const nextDep = currentDep === void 0 ? sub.deps : currentDep.nextDep;
@@ -6,13 +7,22 @@ function link(dep, sub) {
     sub.depsTail = nextDep;
     return;
   }
-  const newLink = {
-    sub,
-    dep,
-    nextSub: void 0,
-    prevSub: void 0,
-    nextDep
-  };
+  let newLink;
+  if (linkPool) {
+    newLink = linkPool;
+    linkPool = linkPool.nextDep;
+    newLink.nextDep = nextDep;
+    newLink.dep = dep;
+    newLink.sub = sub;
+  } else {
+    newLink = {
+      sub,
+      dep,
+      nextSub: void 0,
+      prevSub: void 0,
+      nextDep
+    };
+  }
   if (dep.subsTail) {
     dep.subsTail.nextSub = newLink;
     newLink.prevSub = dep.subsTail;
@@ -69,7 +79,8 @@ function clearTracking(link2) {
       dep.subsTail = prevSub;
     }
     link2.dep = link2.sub = void 0;
-    link2.nextDep = void 0;
+    link2.nextDep = linkPool;
+    linkPool = link2;
     link2 = nextDep;
   }
 }

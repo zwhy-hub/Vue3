@@ -31,12 +31,14 @@ export interface Link {
   nextDep: Link | undefined
 }
 
+// 保存已经被清理掉的节点，留着复用
+let linkPool: Link
+
 /**
  * 链接链表关系
  * @param dep
  * @param sub
  */
-
 export function link(dep, sub) {
   //复用链表依赖
   const currentDep = sub.depsTail
@@ -50,12 +52,22 @@ export function link(dep, sub) {
     return
   }
 
-  const newLink = {
-    sub,
-    dep,
-    nextSub: undefined,
-    prevSub: undefined,
-    nextDep,
+  let newLink
+
+  if (linkPool) {
+    newLink = linkPool
+    linkPool = linkPool.nextDep
+    newLink.nextDep = nextDep
+    newLink.dep = dep
+    newLink.sub = sub
+  } else {
+    newLink = {
+      sub,
+      dep,
+      nextSub: undefined,
+      prevSub: undefined,
+      nextDep,
+    }
   }
 
   //将链表节点与dep建立关系
@@ -162,7 +174,11 @@ export function clearTracking(link: Link) {
     }
 
     link.dep = link.sub = undefined
-    link.nextDep = undefined
+
+    //将清理的节点给linkPool
+    link.nextDep = linkPool
+    linkPool = link
+
     link = nextDep
   }
 }
