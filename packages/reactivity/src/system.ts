@@ -40,6 +40,7 @@ let linkPool: Link
  * @param sub
  */
 export function link(dep, sub) {
+  // debugger
   //复用链表依赖
   const currentDep = sub.depsTail
   /**
@@ -108,7 +109,10 @@ export function propagate(subs) {
   let link = subs
   let queuedEffect = []
   while (link) {
-    queuedEffect.push(link.sub)
+    const sub = subs.sub
+    if (!sub.tracking) {
+      queuedEffect.push(link.sub)
+    }
     link = link.nextSub
   }
   queuedEffect.forEach(effect => effect.notify())
@@ -120,6 +124,7 @@ export function propagate(subs) {
  */
 export function startTrack(sub) {
   sub.depsTail = undefined
+  sub.tracking = true
 }
 
 /**

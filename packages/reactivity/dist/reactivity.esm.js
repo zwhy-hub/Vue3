@@ -43,13 +43,17 @@ function propagate(subs) {
   let link2 = subs;
   let queuedEffect = [];
   while (link2) {
-    queuedEffect.push(link2.sub);
+    const sub = subs.sub;
+    if (!sub.tracking) {
+      queuedEffect.push(link2.sub);
+    }
     link2 = link2.nextSub;
   }
   queuedEffect.forEach((effect2) => effect2.notify());
 }
 function startTrack(sub) {
   sub.depsTail = void 0;
+  sub.tracking = true;
 }
 function endTrack(sub) {
   const depsTail = sub.depsTail;
@@ -99,6 +103,7 @@ var ReactiveEffect = class {
    * 依赖项链表的尾节点
    */
   depsTail;
+  tracking;
   run() {
     const prevSub = activeSub;
     activeSub = this;

@@ -21,14 +21,18 @@
 
       const flag = ref(true)
       const name = ref('yj')
+      const name2 = ref('666')
       const age = ref(18)
+      const age2 = ref(20)
 
       effect(() => {
         console.count('effect')
         if (flag.value) {
           app.innerHTML = name.value
+          console.log(name2.value)
         } else {
           app.innerHTML = age.value
+          console.log(age2.value)
         }
       })
 
