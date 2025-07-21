@@ -3,7 +3,7 @@ import { ReactiveEffect } from './effect'
 /**
  * 依赖项
  */
-export interface Dep {
+export interface Dependency {
   /**
    * 订阅者链表头节点
    */
@@ -26,7 +26,7 @@ export interface Link {
   //上一个订阅者节点
   prevSub: Link | undefined
   //依赖项
-  dep: Dep
+  dep: Dependency
   //下一个依赖项节点
   nextDep: Link | undefined
 }
@@ -109,9 +109,9 @@ export function propagate(subs) {
   let link = subs
   let queuedEffect = []
   while (link) {
-    const sub = subs.sub
+    const sub = link.sub
     if (!sub.tracking) {
-      queuedEffect.push(link.sub)
+      queuedEffect.push(sub)
     }
     link = link.nextSub
   }
@@ -132,6 +132,7 @@ export function startTrack(sub) {
  * @param sub 结束追踪，找到需要清理的依赖，断开关联关系
  */
 export function endTrack(sub) {
+  sub.tracking = false
   const depsTail = sub.depsTail
   /**
    * 如果depsTail有，并且depsTail还有nextDep,清除依赖关系

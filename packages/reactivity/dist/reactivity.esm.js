@@ -43,9 +43,9 @@ function propagate(subs) {
   let link2 = subs;
   let queuedEffect = [];
   while (link2) {
-    const sub = subs.sub;
+    const sub = link2.sub;
     if (!sub.tracking) {
-      queuedEffect.push(link2.sub);
+      queuedEffect.push(sub);
     }
     link2 = link2.nextSub;
   }
@@ -56,6 +56,7 @@ function startTrack(sub) {
   sub.tracking = true;
 }
 function endTrack(sub) {
+  sub.tracking = false;
   const depsTail = sub.depsTail;
   if (depsTail) {
     if (depsTail.nextDep) {
@@ -103,7 +104,7 @@ var ReactiveEffect = class {
    * 依赖项链表的尾节点
    */
   depsTail;
-  tracking;
+  tracking = false;
   run() {
     const prevSub = activeSub;
     activeSub = this;
@@ -176,11 +177,81 @@ function triggerRef(dep) {
     propagate(dep.subs);
   }
 }
+
+// packages/shared/src/index.ts
+function isObject(obj) {
+  return obj !== null && typeof obj === "object";
+}
+
+// packages/reactivity/src/reactive.ts
+function reactive(target) {
+  return createReactiveObject(target);
+}
+function createReactiveObject(target) {
+  if (!isObject(target)) {
+    return;
+  }
+  const proxy = new Proxy(target, {
+    get(target2, key, receiver) {
+      track(target2, key);
+      return Reflect.get(target2, key);
+    },
+    set(target2, key, newValue, receiver) {
+      const res = Reflect.set(target2, key, newValue);
+      trigger(target2, key);
+      return res;
+    }
+  });
+  return proxy;
+}
+var targetMap = /* @__PURE__ */ new WeakMap();
+function track(target, key) {
+  if (!activeSub) {
+    return;
+  }
+  let depsMap = targetMap.get(target);
+  if (!depsMap) {
+    depsMap = /* @__PURE__ */ new Map();
+    targetMap.set(target, depsMap);
+  }
+  let dep = depsMap.get(key);
+  if (!dep) {
+    dep = new Dep();
+    depsMap.set(key, dep);
+  }
+  link(dep, activeSub);
+  console.log("dep", dep);
+}
+function trigger(target, key) {
+  const depsMap = targetMap.get(target);
+  if (!depsMap) {
+    return;
+  }
+  const dep = depsMap.get(key);
+  if (!dep) {
+    return;
+  }
+  propagate(dep.subs);
+}
+var Dep = class {
+  /**
+   * 订阅者链表的头节点,head
+   */
+  subs;
+  /**
+   *
+   * 订阅者链表的尾节点 理解为tail
+   */
+  subsTail;
+  constructor() {
+  }
+};
 export {
   ReactiveEffect,
   activeSub,
   effect,
   isRef,
+  reactive,
   ref,
   trackRef,
   triggerRef

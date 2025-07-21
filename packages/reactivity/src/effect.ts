@@ -14,7 +14,7 @@ export class ReactiveEffect {
    */
   depsTail: Link | undefined
 
-  tracking: false
+  tracking = false
 
   constructor(public fn) {}
 
