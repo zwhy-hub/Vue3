@@ -1,119 +1,64 @@
-import { activeSub } from './effect'
-import { link, propagate } from './system'
-import type { Link } from './system'
 import { isObject } from '@vue/shared'
+import { mutableHandlers } from './baseHandlers'
 
 export function reactive(target) {
   return createReactiveObject(target)
 }
+
+/**
+ * 保存target和响应式对象之间的关联关系
+ * target => proxy
+ */
+const reactiveMap = new WeakMap()
+
+/**
+ * 保存所有reactive创建出来的响应式对象
+ */
+const reactiveSet = new WeakSet()
 
 function createReactiveObject(target) {
   /**
    * reactive必须接收一个对象
    */
   if (!isObject(target)) {
-    return
+    return target
+  }
+
+  if (reactiveSet.has(target)) {
+    return target
+  }
+
+  const exitingProxy = reactiveMap.get(target)
+  if (exitingProxy) {
+    /**
+     * 如果该对象创建过响应式对象，返回创建过的
+     */
+    return exitingProxy
   }
 
   /**
    * 创建代理对象
    */
-  const proxy = new Proxy(target, {
-    get(target, key, receiver) {
-      /**
-       * 收集依赖，绑定target中某个key和sub的联系
-       */
+  const proxy = new Proxy(target, mutableHandlers)
 
-      track(target, key)
-      return Reflect.get(target, key)
-    },
+  /**
+   * 保存target和proxy之间关联关系
+   */
+  reactiveMap.set(target, proxy)
 
-    set(target, key, newValue, receiver) {
-      /**
-       *触发更新，set的时候通知之前收集的依赖重新执行
-       */
-
-      const res = Reflect.set(target, key, newValue)
-
-      trigger(target, key)
-      return res
-    },
-  })
+  /**
+   * 保存创建过的响应式对象
+   */
+  reactiveSet.add(proxy)
 
   return proxy
 }
 
 /**
- * 绑定target的key关联的所有Dep
+ *
+ * @param target 判断是不是响应式对象
+ * @returns
  */
-const targetMap = new WeakMap()
-
-function track(target, key) {
-  if (!activeSub) {
-    return
-  }
-
-  let depsMap = targetMap.get(target)
-
-  if (!depsMap) {
-    /**
-     * 如果没有depsMap，说明之前没收集过任何这个对象的key
-     * 创建一个新的，保存target和depsMap之间的关系
-     */
-    depsMap = new Map()
-    targetMap.set(target, depsMap)
-  }
-
-  /**
-   * 找dep
-   */
-  let dep = depsMap.get(key)
-
-  if (!dep) {
-    /**
-     * 第一次收集这个对象，创建新的
-     */
-    dep = new Dep()
-    depsMap.set(key, dep)
-  }
-
-  link(dep, activeSub)
-  console.log('dep', dep)
-}
-
-function trigger(target, key) {
-  /**
-   * 找depsMap
-   */
-  const depsMap = targetMap.get(target)
-  if (!depsMap) {
-    /**
-     * 该对象没有任何属性在sub中访问过
-     */
-    return
-  }
-
-  /**
-   * 找到key对应的dep
-   */
-  const dep = depsMap.get(key)
-  if (!dep) {
-    //这个key没有在sub中访问过
-    return
-  }
-
-  propagate(dep.subs)
-}
-
-class Dep {
-  /**
-   * 订阅者链表的头节点,head
-   */
-  subs: Link
-  /**
-   *
-   * 订阅者链表的尾节点 理解为tail
-   */
-  subsTail: Link
-  constructor() {}
+export function isReactive(target) {
+  return reactiveSet.has(target)
 }

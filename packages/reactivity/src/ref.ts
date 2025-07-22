@@ -1,5 +1,7 @@
 import { activeSub } from './effect'
 import { Link, link, propagate } from './system'
+import { isReactive, reactive } from './reactive'
+import { hasChanged } from '@vue/shared'
 
 enum ReactiveFlags {
   IS_REF = '__v_isRef',
@@ -24,7 +26,7 @@ class RefImpl {
   subsTail: Link
 
   constructor(value) {
-    this._value = value
+    this._value = isReactive(value) ? reactive(value) : value
   }
 
   get value() {
@@ -37,9 +39,14 @@ class RefImpl {
   }
 
   set value(newValue) {
-    this._value = newValue
-    //通知effect函数执行
-    triggerRef(this)
+    /**
+     * 只有newValue不等于oldValue才更新
+     */
+    if (hasChanged(newValue, this._value)) {
+      this._value = isReactive(newValue) ? reactive(newValue) : newValue
+      //通知effect函数执行
+      triggerRef(this)
+    }
   }
 }
 

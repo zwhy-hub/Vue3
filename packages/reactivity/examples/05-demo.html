@@ -12,18 +12,21 @@
   </head>
   <body>
     <script type="module">
-      import { reactive, effect } from '../dist/reactivity.esm.js'
+      import { reactive, effect, ref } from '../dist/reactivity.esm.js'
 
+      const a = ref(0)
       const state = reactive({
-        a: 1,
+        a: {
+          b: 0,
+        },
       })
 
       effect(() => {
-        console.log(state.a)
+        console.log(state.a.b)
       })
 
       setTimeout(() => {
-        state.a = 2
+        state.a.b = 1
       }, 1000)
     </script>
   </body>

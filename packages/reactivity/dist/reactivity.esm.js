@@ -132,78 +132,15 @@ function effect(fn, options) {
   return runner;
 }
 
-// packages/reactivity/src/ref.ts
-var RefImpl = class {
-  //保存实际的值
-  _value;
-  //ref标记 证明是一个ref
-  ["__v_isRef" /* IS_REF */] = true;
-  /**
-   * 订阅者链表的头节点,head
-   */
-  subs;
-  /**
-   *
-   * 订阅者链表的尾节点 理解为tail
-   */
-  subsTail;
-  constructor(value) {
-    this._value = value;
-  }
-  get value() {
-    if (activeSub) {
-      trackRef(this);
-    }
-    return this._value;
-  }
-  set value(newValue) {
-    this._value = newValue;
-    triggerRef(this);
-  }
-};
-function ref(value) {
-  return new RefImpl(value);
-}
-function isRef(value) {
-  return !!(value && value["__v_isRef" /* IS_REF */]);
-}
-function trackRef(dep) {
-  if (activeSub) {
-    link(dep, activeSub);
-  }
-}
-function triggerRef(dep) {
-  if (dep.subs) {
-    propagate(dep.subs);
-  }
-}
-
 // packages/shared/src/index.ts
 function isObject(obj) {
   return obj !== null && typeof obj === "object";
 }
+function hasChanged(oldValue, newValue) {
+  return !Object.is(oldValue, newValue);
+}
 
-// packages/reactivity/src/reactive.ts
-function reactive(target) {
-  return createReactiveObject(target);
-}
-function createReactiveObject(target) {
-  if (!isObject(target)) {
-    return;
-  }
-  const proxy = new Proxy(target, {
-    get(target2, key, receiver) {
-      track(target2, key);
-      return Reflect.get(target2, key);
-    },
-    set(target2, key, newValue, receiver) {
-      const res = Reflect.set(target2, key, newValue);
-      trigger(target2, key);
-      return res;
-    }
-  });
-  return proxy;
-}
+// packages/reactivity/src/dep.ts
 var targetMap = /* @__PURE__ */ new WeakMap();
 function track(target, key) {
   if (!activeSub) {
@@ -220,7 +157,6 @@ function track(target, key) {
     depsMap.set(key, dep);
   }
   link(dep, activeSub);
-  console.log("dep", dep);
 }
 function trigger(target, key) {
   const depsMap = targetMap.get(target);
@@ -246,10 +182,112 @@ var Dep = class {
   constructor() {
   }
 };
+
+// packages/reactivity/src/baseHandlers.ts
+var mutableHandlers = {
+  get(target, key, receiver) {
+    track(target, key);
+    const res = Reflect.get(target, key, receiver);
+    if (isRef(res)) {
+      return res.value;
+    }
+    if (isObject(res)) {
+      return reactive(res);
+    }
+    return Reflect.get(target, key, receiver);
+  },
+  set(target, key, newValue, receiver) {
+    const oldValue = target[key];
+    const res = Reflect.set(target, key, newValue, receiver);
+    if (isRef(oldValue) && !isRef(newValue)) {
+      oldValue.value = newValue;
+      return res;
+    }
+    if (hasChanged(oldValue, newValue)) {
+      trigger(target, key);
+    }
+    return res;
+  }
+};
+
+// packages/reactivity/src/reactive.ts
+function reactive(target) {
+  return createReactiveObject(target);
+}
+var reactiveMap = /* @__PURE__ */ new WeakMap();
+var reactiveSet = /* @__PURE__ */ new WeakSet();
+function createReactiveObject(target) {
+  if (!isObject(target)) {
+    return target;
+  }
+  if (reactiveSet.has(target)) {
+    return target;
+  }
+  const exitingProxy = reactiveMap.get(target);
+  if (exitingProxy) {
+    return exitingProxy;
+  }
+  const proxy = new Proxy(target, mutableHandlers);
+  reactiveMap.set(target, proxy);
+  reactiveSet.add(proxy);
+  return proxy;
+}
+function isReactive(target) {
+  return reactiveSet.has(target);
+}
+
+// packages/reactivity/src/ref.ts
+var RefImpl = class {
+  //保存实际的值
+  _value;
+  //ref标记 证明是一个ref
+  ["__v_isRef" /* IS_REF */] = true;
+  /**
+   * 订阅者链表的头节点,head
+   */
+  subs;
+  /**
+   *
+   * 订阅者链表的尾节点 理解为tail
+   */
+  subsTail;
+  constructor(value) {
+    this._value = isReactive(value) ? reactive(value) : value;
+  }
+  get value() {
+    if (activeSub) {
+      trackRef(this);
+    }
+    return this._value;
+  }
+  set value(newValue) {
+    if (hasChanged(newValue, this._value)) {
+      this._value = isReactive(newValue) ? reactive(newValue) : newValue;
+      triggerRef(this);
+    }
+  }
+};
+function ref(value) {
+  return new RefImpl(value);
+}
+function isRef(value) {
+  return !!(value && value["__v_isRef" /* IS_REF */]);
+}
+function trackRef(dep) {
+  if (activeSub) {
+    link(dep, activeSub);
+  }
+}
+function triggerRef(dep) {
+  if (dep.subs) {
+    propagate(dep.subs);
+  }
+}
 export {
   ReactiveEffect,
   activeSub,
   effect,
+  isReactive,
   isRef,
   reactive,
   ref,
