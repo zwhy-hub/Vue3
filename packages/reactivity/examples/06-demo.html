@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body {
+        padding: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { computed, effect, ref } from '../dist/reactivity.esm.js'
+
+      const count = ref(0)
+
+      const c = computed(() => {
+        return count.value + 1
+      })
+
+      effect(() => {
+        console.log(c.value)
+      })
+
+      setTimeout(() => {
+        count.value = 1
+      }, 1000)
+    </script>
+  </body>
+</html>

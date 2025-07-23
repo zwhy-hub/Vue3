@@ -3,7 +3,7 @@ import { Link, link, propagate } from './system'
 import { isReactive, reactive } from './reactive'
 import { hasChanged } from '@vue/shared'
 
-enum ReactiveFlags {
+export enum ReactiveFlags {
   IS_REF = '__v_isRef',
 }
 
@@ -13,8 +13,10 @@ enum ReactiveFlags {
 class RefImpl {
   //保存实际的值
   _value;
+
   //ref标记 证明是一个ref
   [ReactiveFlags.IS_REF] = true
+
   /**
    * 订阅者链表的头节点,head
    */

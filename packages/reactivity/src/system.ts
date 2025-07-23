@@ -1,5 +1,3 @@
-import { ReactiveEffect } from './effect'
-
 /**
  * 依赖项
  */
@@ -17,6 +15,7 @@ export interface Dependency {
 export interface Sub {
   deps: Link | undefined
   depsTail: Link | undefined
+  tracking: boolean
 }
 export interface Link {
   //订阅者

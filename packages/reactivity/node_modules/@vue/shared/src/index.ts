@@ -11,3 +11,7 @@ export function isObject(obj) {
 export function hasChanged(oldValue, newValue) {
   return !Object.is(oldValue, newValue)
 }
+
+export function isFunction(value) {
+  return typeof value === 'function'
+}

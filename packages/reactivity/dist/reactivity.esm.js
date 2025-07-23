@@ -92,6 +92,9 @@ function clearTracking(link2) {
 
 // packages/reactivity/src/effect.ts
 var activeSub;
+function setActiveSub(sub) {
+  activeSub = sub;
+}
 var ReactiveEffect = class {
   constructor(fn) {
     this.fn = fn;
@@ -107,13 +110,13 @@ var ReactiveEffect = class {
   tracking = false;
   run() {
     const prevSub = activeSub;
-    activeSub = this;
+    setActiveSub(this);
     startTrack(this);
     try {
       return this.fn();
     } finally {
       endTrack(this);
-      activeSub = prevSub;
+      setActiveSub(prevSub);
     }
   }
   notify() {
@@ -138,6 +141,9 @@ function isObject(obj) {
 }
 function hasChanged(oldValue, newValue) {
   return !Object.is(oldValue, newValue);
+}
+function isFunction(value) {
+  return typeof value === "function";
 }
 
 // packages/reactivity/src/dep.ts
@@ -237,6 +243,10 @@ function isReactive(target) {
 }
 
 // packages/reactivity/src/ref.ts
+var ReactiveFlags = /* @__PURE__ */ ((ReactiveFlags2) => {
+  ReactiveFlags2["IS_REF"] = "__v_isRef";
+  return ReactiveFlags2;
+})(ReactiveFlags || {});
 var RefImpl = class {
   //保存实际的值
   _value;
@@ -283,14 +293,86 @@ function triggerRef(dep) {
     propagate(dep.subs);
   }
 }
+
+// packages/reactivity/src/computed.ts
+var ComputedRefImpl = class {
+  constructor(fn, setter) {
+    this.fn = fn;
+    this.setter = setter;
+  }
+  //computed也是一个ref
+  ["__v_isRef" /* IS_REF */] = true;
+  //保存fn的返回值
+  _value;
+  //作为dep
+  /**
+   * 订阅者链表的头节点,head
+   */
+  subs;
+  /**
+   *
+   * 订阅者链表的尾节点 理解为tail
+   */
+  subsTail;
+  //作为sub
+  /**
+   * 依赖项链表的头节点
+   */
+  deps;
+  /**
+   * 依赖项链表的尾节点
+   */
+  depsTail;
+  tracking = false;
+  get value() {
+    this.update();
+    if (activeSub) {
+      link(this, activeSub);
+    }
+    return this._value;
+  }
+  set value(newValue) {
+    if (this.setter) {
+      this.setter(newValue);
+    } else {
+      console.warn("no");
+    }
+  }
+  update() {
+    const prevSub = activeSub;
+    setActiveSub(this);
+    startTrack(this);
+    try {
+      this._value = this.fn();
+    } finally {
+      endTrack(this);
+      setActiveSub(prevSub);
+    }
+    this._value = this.fn();
+  }
+};
+function computed(getterOrOptions) {
+  let getter;
+  let setter;
+  if (isFunction(getterOrOptions)) {
+    getter = getterOrOptions;
+  } else {
+    getter = getterOrOptions.get;
+    setter = getterOrOptions.set;
+  }
+  return new ComputedRefImpl(getter, setter);
+}
 export {
   ReactiveEffect,
+  ReactiveFlags,
   activeSub,
+  computed,
   effect,
   isReactive,
   isRef,
   reactive,
   ref,
+  setActiveSub,
   trackRef,
   triggerRef
 };
