@@ -1,7 +1,7 @@
 import { activeSub, ReactiveEffect, setActiveSub } from './effect'
-import { isFunction } from '@vue/shared'
+import { hasChanged, isFunction } from '@vue/shared'
 import { ReactiveFlags } from './ref'
-import { Dependency, endTrack, link, startTrack, Sub } from './system'
+import { Dependency, endTrack, Link, link, startTrack, Sub } from './system'
 
 class ComputedRefImpl implements Dependency, Sub {
   //computed也是一个ref
@@ -33,19 +33,24 @@ class ComputedRefImpl implements Dependency, Sub {
 
   tracking = false
 
+  //计算属性脏不脏，如果为脏，get value的时候需要执行update
+  dirty = true
+
   constructor(
     public fn, //getter
     private setter,
   ) {}
 
   get value() {
-    this.update()
+    if (this.dirty) {
+      this.update()
+    }
     /**
      * 和sub建立关联关系
      */
-    // if (activeSub) {
-    //   link(this, activeSub)
-    // }
+    if (activeSub) {
+      link(this, activeSub)
+    }
     return this._value
   }
 
@@ -68,13 +73,14 @@ class ComputedRefImpl implements Dependency, Sub {
     //标记为undefined 表示被dep触发了重新执行 要尝试复用link节点
     startTrack(this)
     try {
+      const oldValue = this._value
       this._value = this.fn()
+      return hasChanged(this._value, oldValue)
     } finally {
       endTrack(this)
       //执行完之后 把active设置成undefined
       setActiveSub(prevSub)
     }
-    this._value = this.fn()
   }
 }
 

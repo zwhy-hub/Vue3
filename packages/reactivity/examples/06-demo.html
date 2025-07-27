@@ -17,7 +17,8 @@
       const count = ref(0)
 
       const c = computed(() => {
-        return count.value + 1
+        console.log('计算属性执行')
+        return count.value * 0
       })
 
       effect(() => {

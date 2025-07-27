@@ -52,8 +52,13 @@ export function link(dep, sub) {
     return
   }
 
+  //可遍历dep.sub是否建立过关联关系，直接return,时间换空间
+
   let newLink
 
+  /**
+   * 如果有linkPool,复用
+   */
   if (linkPool) {
     newLink = linkPool
     linkPool = linkPool.nextDep
@@ -106,8 +111,10 @@ function processComputedUpdate(sub) {
    * 1.调用update
    * 2.通知subs链表上所有sub重新执行
    */
-  sub.update()
-  propagate(sub.subs)
+  if (sub.subs && sub.update()) {
+    sub.update()
+    propagate(sub.subs)
+  }
 }
 
 /**
@@ -119,7 +126,8 @@ export function propagate(subs) {
   let queuedEffect = []
   while (link) {
     const sub = link.sub
-    if (!sub.tracking) {
+    if (!sub.tracking && !sub.dirty) {
+      sub.dirty = true
       if ('update' in sub) {
         processComputedUpdate(sub)
       } else {
@@ -147,6 +155,7 @@ export function startTrack(sub) {
 export function endTrack(sub) {
   sub.tracking = false
   const depsTail = sub.depsTail
+  sub.dirty = false
   /**
    * 如果depsTail有，并且depsTail还有nextDep,清除依赖关系
    * 如果depsTail没有，头节点有，全部清除

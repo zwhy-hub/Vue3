@@ -40,22 +40,25 @@ function link(dep, sub) {
   }
 }
 function processComputedUpdate(sub) {
-  sub.update();
-  propagate(sub.subs);
+  if (sub.subs && sub.update()) {
+    sub.update();
+    propagate(sub.subs);
+  }
 }
 function propagate(subs) {
-  let link3 = subs;
+  let link2 = subs;
   let queuedEffect = [];
-  while (link3) {
-    const sub = link3.sub;
-    if (!sub.tracking) {
+  while (link2) {
+    const sub = link2.sub;
+    if (!sub.tracking && !sub.dirty) {
+      sub.dirty = true;
       if ("update" in sub) {
         processComputedUpdate(sub);
       } else {
         queuedEffect.push(sub);
       }
     }
-    link3 = link3.nextSub;
+    link2 = link2.nextSub;
   }
   queuedEffect.forEach((effect2) => effect2.notify());
 }
@@ -66,6 +69,7 @@ function startTrack(sub) {
 function endTrack(sub) {
   sub.tracking = false;
   const depsTail = sub.depsTail;
+  sub.dirty = false;
   if (depsTail) {
     if (depsTail.nextDep) {
       clearTracking(depsTail.nextDep);
@@ -76,25 +80,25 @@ function endTrack(sub) {
     sub.deps = void 0;
   }
 }
-function clearTracking(link3) {
-  while (link3) {
-    const { prevSub, nextSub, nextDep, dep } = link3;
+function clearTracking(link2) {
+  while (link2) {
+    const { prevSub, nextSub, nextDep, dep } = link2;
     if (prevSub) {
       prevSub.nextSub = nextSub;
-      link3.nextSub = void 0;
+      link2.nextSub = void 0;
     } else {
       dep.subs = nextSub;
     }
     if (nextSub) {
       nextSub.prevSub = prevSub;
-      link3.prevSub = void 0;
+      link2.prevSub = void 0;
     } else {
       dep.subsTail = prevSub;
     }
-    link3.dep = link3.sub = void 0;
-    link3.nextDep = linkPool;
-    linkPool = link3;
-    link3 = nextDep;
+    link2.dep = link2.sub = void 0;
+    link2.nextDep = linkPool;
+    linkPool = link2;
+    link2 = nextDep;
   }
 }
 
@@ -116,6 +120,7 @@ var ReactiveEffect = class {
    */
   depsTail;
   tracking = false;
+  dirty = false;
   run() {
     const prevSub = activeSub;
     setActiveSub(this);
@@ -332,8 +337,15 @@ var ComputedRefImpl = class {
    */
   depsTail;
   tracking = false;
+  //计算属性脏不脏，如果为脏，get value的时候需要执行update
+  dirty = true;
   get value() {
-    this.update();
+    if (this.dirty) {
+      this.update();
+    }
+    if (activeSub) {
+      link(this, activeSub);
+    }
     return this._value;
   }
   set value(newValue) {
@@ -348,12 +360,13 @@ var ComputedRefImpl = class {
     setActiveSub(this);
     startTrack(this);
     try {
+      const oldValue = this._value;
       this._value = this.fn();
+      return hasChanged(this._value, oldValue);
     } finally {
       endTrack(this);
       setActiveSub(prevSub);
     }
-    this._value = this.fn();
   }
 };
 function computed(getterOrOptions) {
