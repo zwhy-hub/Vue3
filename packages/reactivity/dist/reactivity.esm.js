@@ -39,15 +39,23 @@ function link(dep, sub) {
     sub.depsTail = newLink;
   }
 }
+function processComputedUpdate(sub) {
+  sub.update();
+  propagate(sub.subs);
+}
 function propagate(subs) {
-  let link2 = subs;
+  let link3 = subs;
   let queuedEffect = [];
-  while (link2) {
-    const sub = link2.sub;
+  while (link3) {
+    const sub = link3.sub;
     if (!sub.tracking) {
-      queuedEffect.push(sub);
+      if ("update" in sub) {
+        processComputedUpdate(sub);
+      } else {
+        queuedEffect.push(sub);
+      }
     }
-    link2 = link2.nextSub;
+    link3 = link3.nextSub;
   }
   queuedEffect.forEach((effect2) => effect2.notify());
 }
@@ -68,25 +76,25 @@ function endTrack(sub) {
     sub.deps = void 0;
   }
 }
-function clearTracking(link2) {
-  while (link2) {
-    const { prevSub, nextSub, nextDep, dep } = link2;
+function clearTracking(link3) {
+  while (link3) {
+    const { prevSub, nextSub, nextDep, dep } = link3;
     if (prevSub) {
       prevSub.nextSub = nextSub;
-      link2.nextSub = void 0;
+      link3.nextSub = void 0;
     } else {
       dep.subs = nextSub;
     }
     if (nextSub) {
       nextSub.prevSub = prevSub;
-      link2.prevSub = void 0;
+      link3.prevSub = void 0;
     } else {
       dep.subsTail = prevSub;
     }
-    link2.dep = link2.sub = void 0;
-    link2.nextDep = linkPool;
-    linkPool = link2;
-    link2 = nextDep;
+    link3.dep = link3.sub = void 0;
+    link3.nextDep = linkPool;
+    linkPool = link3;
+    link3 = nextDep;
   }
 }
 
@@ -326,9 +334,6 @@ var ComputedRefImpl = class {
   tracking = false;
   get value() {
     this.update();
-    if (activeSub) {
-      link(this, activeSub);
-    }
     return this._value;
   }
   set value(newValue) {

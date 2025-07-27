@@ -43,9 +43,9 @@ class ComputedRefImpl implements Dependency, Sub {
     /**
      * 和sub建立关联关系
      */
-    if (activeSub) {
-      link(this, activeSub)
-    }
+    // if (activeSub) {
+    //   link(this, activeSub)
+    // }
     return this._value
   }
 

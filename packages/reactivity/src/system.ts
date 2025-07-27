@@ -100,6 +100,16 @@ export function link(dep, sub) {
   }
 }
 
+function processComputedUpdate(sub) {
+  /**
+   * 更新计算属性
+   * 1.调用update
+   * 2.通知subs链表上所有sub重新执行
+   */
+  sub.update()
+  propagate(sub.subs)
+}
+
 /**
  * 传播更新
  * @param subs
@@ -110,7 +120,11 @@ export function propagate(subs) {
   while (link) {
     const sub = link.sub
     if (!sub.tracking) {
-      queuedEffect.push(sub)
+      if ('update' in sub) {
+        processComputedUpdate(sub)
+      } else {
+        queuedEffect.push(sub)
+      }
     }
     link = link.nextSub
   }
