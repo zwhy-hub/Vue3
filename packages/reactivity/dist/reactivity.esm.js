@@ -111,6 +111,7 @@ var ReactiveEffect = class {
   constructor(fn) {
     this.fn = fn;
   }
+  active = true;
   /**
    * 依赖项链表的头节点
    */
@@ -122,6 +123,9 @@ var ReactiveEffect = class {
   tracking = false;
   dirty = false;
   run() {
+    if (!this.active) {
+      return this.fn();
+    }
     const prevSub = activeSub;
     setActiveSub(this);
     startTrack(this);
@@ -137,6 +141,13 @@ var ReactiveEffect = class {
   }
   scheduler() {
     this.run();
+  }
+  stop() {
+    if (this.active) {
+      startTrack(this);
+      endTrack(this);
+      this.active = false;
+    }
   }
 };
 function effect(fn, options) {
@@ -380,6 +391,39 @@ function computed(getterOrOptions) {
   }
   return new ComputedRefImpl(getter, setter);
 }
+
+// packages/reactivity/src/watch.ts
+function watch(source, cb, options) {
+  const { immediate, once, deep } = options || {};
+  if (once) {
+    const _cb = cb;
+    cb = (...args) => {
+      _cb(...args);
+      stop();
+    };
+  }
+  let getter;
+  if (isRef(source)) {
+    getter = () => source.value;
+  }
+  let oldValue;
+  function job() {
+    const newValue = effect2.run();
+    cb(newValue, oldValue);
+    oldValue = newValue;
+  }
+  const effect2 = new ReactiveEffect(getter);
+  effect2.scheduler = job;
+  if (immediate) {
+    job();
+  } else {
+    oldValue = effect2.run();
+  }
+  function stop() {
+    effect2.stop();
+  }
+  return stop;
+}
 export {
   ReactiveEffect,
   ReactiveFlags,
@@ -392,6 +436,7 @@ export {
   ref,
   setActiveSub,
   trackRef,
-  triggerRef
+  triggerRef,
+  watch
 };
 //# sourceMappingURL=reactivity.esm.js.map

@@ -9,6 +9,7 @@ export function setActiveSub(sub) {
 }
 
 export class ReactiveEffect implements Sub {
+  active = true
   /**
    * 依赖项链表的头节点
    */
@@ -25,6 +26,9 @@ export class ReactiveEffect implements Sub {
   constructor(public fn) {}
 
   run() {
+    if (!this.active) {
+      return this.fn()
+    }
     const prevSub = activeSub
     //每次执行fn之前，吧this放在activeSub上
     setActiveSub(this)
@@ -45,6 +49,14 @@ export class ReactiveEffect implements Sub {
 
   scheduler() {
     this.run()
+  }
+
+  stop() {
+    if (this.active) {
+      startTrack(this)
+      endTrack(this)
+      this.active = false
+    }
   }
 }
 

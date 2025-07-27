@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body {
+        padding: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { watch, effect, ref } from '../dist/reactivity.esm.js'
+
+      const state = ref({
+        a: {
+          b: 1,
+        },
+      })
+
+      const stop = watch(
+        count,
+        (newValue, oldValue) => {
+          console.log(`count changed from ${oldValue} to ${newValue}`)
+        },
+        {
+          once: true,
+        },
+      )
+
+      // effect(() => {
+      //   console.log(c.value)
+      // })
+
+      setTimeout(() => {
+        count.value = 1
+        setTimeout(() => {
+          // stop() // 停止监听
+          count.value = 2
+        }, 1000)
+      }, 1000)
+    </script>
+  </body>
+</html>
